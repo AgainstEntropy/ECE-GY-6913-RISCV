@@ -14,7 +14,7 @@ class InsMem(object):
     def readInstr(self, ReadAddress: int):
         # read instruction memory
         # return 32 bit hex val
-        return "".join(self.IMem[ReadAddress : ReadAddress + 4])
+        return "".join(self.IMem[ReadAddress: ReadAddress + 4])  # read in 4 lines and cocnat them into a 32-bit binary string
 
 
 class DataMem(object):

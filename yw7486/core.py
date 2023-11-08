@@ -2,59 +2,19 @@ from pathlib import Path
 
 from constants import FS_STATE_RESULT_FILE, RF_FILE, SS_STATE_RESULT_FILE
 from mem import DataMem, InsMem
-
-
-class State(object):
-    def __init__(self):
-        self.IF = {"nop": False, "PC": 0}
-        self.ID = {"nop": False, "Instr": 0}
-        self.EX = {
-            "nop": False,
-            "Read_data1": 0,
-            "Read_data2": 0,
-            "Imm": 0,
-            "Rs": 0,
-            "Rt": 0,
-            "Wrt_reg_addr": 0,
-            "is_I_type": False,
-            "rd_mem": 0,
-            "wrt_mem": 0,
-            "alu_op": 0,
-            "wrt_enable": 0,
-        }
-        self.MEM = {
-            "nop": False,
-            "ALUresult": 0,
-            "Store_data": 0,
-            "Rs": 0,
-            "Rt": 0,
-            "Wrt_reg_addr": 0,
-            "rd_mem": 0,
-            "wrt_mem": 0,
-            "wrt_enable": 0,
-        }
-        self.WB = {
-            "nop": False,
-            "Wrt_data": 0,
-            "Rs": 0,
-            "Rt": 0,
-            "Wrt_reg_addr": 0,
-            "wrt_enable": 0,
-        }
+from state import State
 
 
 class RegisterFile(object):
     def __init__(self, outPath: Path):
         self.outputFile = outPath
-        self.Registers = [0x0 for i in range(32)]
+        self.Registers = [0x0 for _ in range(32)]
 
     def readRF(self, Reg_addr: int):
-        # Fill in
-        pass
+        return self.Registers[Reg_addr]
 
-    def writeRF(self, Reg_addr: int, Wrt_reg_data):
-        # Fill in
-        pass
+    def writeRF(self, Reg_addr: int, Wrt_reg_data: int):
+        self.Registers[Reg_addr] = Wrt_reg_data
 
     def outputRF(self, cycle: int):
         op = ["-" * 70 + "\n", f"State of RF after executing cycle: {cycle}\n"]
@@ -96,6 +56,8 @@ class SingleStageCore(Core):
         self.halted = True
         if self.state.IF["nop"]:
             self.halted = True
+        else:
+            self.IF_forward()
 
         self.myRF.outputRF(self.cycle)  # dump RF
         self.printState(
@@ -107,6 +69,9 @@ class SingleStageCore(Core):
         )  # The end of the cycle and updates the current state with the values calculated in this cycle
         self.cycle += 1
 
+    def IF_forward(self):
+        self.state.ID["Instr"] = self.ext_imem.readInstr(self.state.IF["PC"])
+    
     def printState(self, state: State, cycle: int):
         printstate = [
             "-" * 70 + "\n",
@@ -115,10 +80,7 @@ class SingleStageCore(Core):
         printstate.append("IF.PC: " + str(state.IF["PC"]) + "\n")
         printstate.append("IF.nop: " + str(state.IF["nop"]) + "\n")
 
-        if cycle == 0:
-            perm = "w"
-        else:
-            perm = "a"
+        perm = "w" if cycle == 0 else "a"
         with open(self.opFilePath, perm) as wf:
             wf.writelines(printstate)
 
