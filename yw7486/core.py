@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from constants import FS_STATE_RESULT_FILE, RF_FILE, SS_STATE_RESULT_FILE, STAGES
+from constants import FS_STATE_RESULT_FILE, INSTR_TYPES, RF_FILE, SS_STATE_RESULT_FILE, STAGES, WORD_LEN
 from mem import DataMem, InsMem
 from state import StageManager, State
 from instruction import Instruction
@@ -59,9 +59,20 @@ class SingleStageCore(Core):
         if self.state.IF["nop"]:
             self.halted = True
         else:
-            self.IF_forward()
+            if self.stage_manager.is_stage(STAGES.IF):
+                self.IF_forward()
 
-            self.ID_forward()
+            if self.stage_manager.is_stage(STAGES.ID):
+                self.ID_forward()
+
+            if self.stage_manager.is_stage(STAGES.EX):
+                self.EX_forward()
+
+            if self.stage_manager.is_stage(STAGES.MEM):
+                self.MEM_forward()
+
+            if self.stage_manager.is_stage(STAGES.WB):
+                self.WB_forward()
 
         self.myRF.outputRF(self.cycle)  # dump RF
         self.printState(
@@ -74,29 +85,70 @@ class SingleStageCore(Core):
         self.cycle += 1
 
     def IF_forward(self):
-        self.state.ID["Instr"] = self.ext_imem.readInstr(self.state.IF["PC"])
+        self.nextState.ID["Instr"] = self.ext_imem.readInstr(self.nextState.IF["PC"])
         self.stage_manager.forward()
 
     def ID_forward(self):
-        self.instruction = self.parse_instruction(self.state.ID["Instr"])
-        if self.instruction.is_halt():
-            self.state.IF['nop'] = 1
+        current_instr = self.parse_instruction(self.nextState.ID["Instr"])
+        self.nextState.EX["is_I_type"] = (current_instr.type == INSTR_TYPES.I)
+        
+        if current_instr.is_halt():
+            self.nextState.IF['nop'] = True
+            self.stage_manager.reset()
+            return
+
+        if current_instr.rs1 is not None:
+            self.nextState.EX["Read_data1"] = self.myRF.readRF(current_instr.rs1)
+        
+        if current_instr.rs2 is not None:
+            self.nextState.EX["Read_data2"] = self.myRF.readRF(current_instr.rs2)
+
+        if current_instr.rd is not None:
+            self.nextState.EX["Wrt_reg_addr"] = current_instr.rd
+
+        if current_instr.imm is not None:
+            self.nextState.EX["Imm"] = current_instr.imm
+
+        if current_instr.alu_op is not None:
+            self.nextState.EX["alu_op"] = current_instr.alu_op
+
+        if current_instr.is_jump():
+            self.myRF.writeRF(self.nextState.EX["Wrt_reg_addr"], self.nextState.IF["PC"] + WORD_LEN)
+            self.nextState.IF["PC"] += self.nextState.EX["Imm"]
             self.stage_manager.reset()
             return
         
-        if self.instruction.rs1 is not None:
-            self.state.EX["Read_data1"] = self.myRF.readRF(self.instruction.rs1)
+        if current_instr.is_branch():
+            rs_equal = (self.nextState.EX["Read_data1"] == self.nextState.EX["Read_data2"])
+            if (current_instr.is_beq() and rs_equal) or (current_instr.is_bne() and not rs_equal):
+                self.nextState.IF["PC"] += self.nextState.EX["Imm"]
+            else:
+                self.nextState.IF["PC"] += WORD_LEN
+            self.stage_manager.reset()
+            return
         
-        if self.instruction.rs2 is not None:
-            self.state.EX["Read_data2"] = self.myRF.readRF(self.instruction.rs2)
-
-        if self.instruction.rd is not None:
-            self.state.EX["Wrt_reg_addr"] = self.instruction.rd
-
-        if self.instruction.imm is not None:
-            self.state.EX["Imm"] = self.instruction.imm
+        self.instruction = current_instr
         
         self.stage_manager.forward()
+
+    def EX_forward(self):
+        operand_1 = self.nextState.EX["Read_data1"]
+        if self.instruction.type in [INSTR_TYPES.R, INSTR_TYPES.B]:
+            operand_2 = self.nextState.EX["Read_data2"]
+        else:
+            operand_2 = self.nextState.EX["Imm"]
+
+        self.nextState.MEM["ALUresult"] = self.nextState.EX["alu_op"](operand_1, operand_2)
+
+        self.nextState.MEM["Wrt_reg_addr"] = self.nextState.EX["Wrt_reg_addr"]
+        
+        self.nextState.MEM["Store_data"] = self.nextState.EX["Read_data2"]
+    
+    def MEM_forward(self):
+        raise NotImplementedError
+    
+    def WB_forward(self):
+        raise NotImplementedError
     
     def printState(self, state: State, cycle: int):
         printstate = [

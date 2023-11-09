@@ -3,7 +3,7 @@ from copy import deepcopy
 
 from core import FiveStageCore, SingleStageCore
 from mem import DataMem, InsMem
-from utils import Args, get_args
+from args import Args, get_args
 
 
 def process_testcase(TC_args: Args):

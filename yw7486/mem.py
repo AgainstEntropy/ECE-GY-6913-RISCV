@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from constants import DMEM_FILE, DMEM_RESULT_FILE, IMEM_FILE
-from utils import Args
+from args import Args
 
 
 class InsMem(object):

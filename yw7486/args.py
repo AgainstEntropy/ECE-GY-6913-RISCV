@@ -1,12 +1,11 @@
 import os
-from functools import partial
 from pathlib import Path
 
 from tap import Tap
 
 from constants import NETID
 
-binary_str_to_int = partial(int, base=2)
+
 
 class Args(Tap):
     debug: bool = False

@@ -16,6 +16,12 @@ PERFORMANCE_FILE = "PerformanceMetrics.txt"
 SS_STATE_RESULT_FILE = "StateResult_SS.txt"
 FS_STATE_RESULT_FILE = "StateResult_FS.txt"
 
+SYS_BIT = 32
+BYTE = 8
+WORD_LEN = SYS_BIT // BYTE
+UPPER_BOUND = 2 ** (SYS_BIT - 1) - 1
+BIAS = 2 ** SYS_BIT
+
 STAGES = EasyDict(
     IF  = 0,
     ID  = 1,
@@ -27,9 +33,9 @@ STAGES = EasyDict(
 INSTR_TYPES = EasyDict(
     R      = 0,
     I      = 1,
-    LOAD_I = 2,
-    J      = 3,
-    B      = 4,
+    J      = 2,
+    B      = 3,
+    LOAD_I = 4,
     S      = 5,
     HALT   = 6,
 )
