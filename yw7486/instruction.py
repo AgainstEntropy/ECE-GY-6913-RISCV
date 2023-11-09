@@ -88,6 +88,18 @@ class Instruction:
     def is_halt(self):
         return self.type == INSTR_TYPES.HALT
     
+    def is_i_type(self):
+        return self.type == INSTR_TYPES.I
+
+    def is_r_type(self):
+        return self.type == INSTR_TYPES.R
+    
+    def is_loadi(self):
+        return self.type == INSTR_TYPES.LOAD_I
+    
+    def is_save(self):
+        return self.type == INSTR_TYPES.S
+    
     def is_branch(self):
         return self.type == INSTR_TYPES.B
     
