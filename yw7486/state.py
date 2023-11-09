@@ -1,3 +1,6 @@
+from constants import STAGES
+
+
 class State(object):
     def __init__(self):
         self.IF = {"nop": False, "PC": 0}
@@ -35,3 +38,21 @@ class State(object):
             "Wrt_reg_addr": 0,
             "wrt_enable": 0,
         }
+
+
+class StageManager:
+    def __init__(self) -> None:
+        self.reset()
+
+    def reset(self) -> None:
+        self.current_stage = STAGES.IF
+    
+    def set_stage(self, stage: int = None) -> None:
+        if stage is not None:
+            self.current_stage = stage
+        
+    def forward(self) -> None:
+        self.current_stage += 1
+
+    def is_stage(self, stage: int) -> bool:
+        return self.current_stage == stage

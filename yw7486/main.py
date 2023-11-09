@@ -35,7 +35,7 @@ if __name__ == "__main__":
     args = get_args()
 
     for testcase in os.listdir(args.iodir):
-        print(testcase)
+        print(f"Processing {testcase} ...")
         testcase_args = deepcopy(args)
         testcase_args.iodir = args.iodir / testcase
         testcase_args.output_dir = args.output_dir / testcase

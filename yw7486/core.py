@@ -1,8 +1,10 @@
 from pathlib import Path
 
-from constants import FS_STATE_RESULT_FILE, RF_FILE, SS_STATE_RESULT_FILE
+from constants import FS_STATE_RESULT_FILE, RF_FILE, SS_STATE_RESULT_FILE, STAGES
 from mem import DataMem, InsMem
-from state import State
+from state import StageManager, State
+from instruction import Instruction
+from monitors import Monitor
 
 
 class RegisterFile(object):
@@ -38,10 +40,11 @@ class Core(object):
         self.ext_imem: InsMem = imem
         self.ext_dmem: DataMem = dmem
 
+        self.monitor = Monitor()
+
     @staticmethod
     def parse_instruction(instruction: str):
-        # TODO: implement this
-        raise NotImplementedError
+        parsed_instruction = Instruction(instruction)
         return parsed_instruction
 
 
@@ -50,14 +53,15 @@ class SingleStageCore(Core):
         super(SingleStageCore, self).__init__(ioDir / f"SS_{RF_FILE}", imem, dmem)
         self.opFilePath = ioDir / SS_STATE_RESULT_FILE
 
-    def step(self):
-        # Your implementation
+        self.stage_manager = StageManager()
 
-        self.halted = True
+    def step(self):
         if self.state.IF["nop"]:
             self.halted = True
         else:
             self.IF_forward()
+
+            self.ID_forward()
 
         self.myRF.outputRF(self.cycle)  # dump RF
         self.printState(
@@ -71,6 +75,28 @@ class SingleStageCore(Core):
 
     def IF_forward(self):
         self.state.ID["Instr"] = self.ext_imem.readInstr(self.state.IF["PC"])
+        self.stage_manager.forward()
+
+    def ID_forward(self):
+        self.instruction = self.parse_instruction(self.state.ID["Instr"])
+        if self.instruction.is_halt():
+            self.state.IF['nop'] = 1
+            self.stage_manager.reset()
+            return
+        
+        if self.instruction.rs1 is not None:
+            self.state.EX["Read_data1"] = self.myRF.readRF(self.instruction.rs1)
+        
+        if self.instruction.rs2 is not None:
+            self.state.EX["Read_data2"] = self.myRF.readRF(self.instruction.rs2)
+
+        if self.instruction.rd is not None:
+            self.state.EX["Wrt_reg_addr"] = self.instruction.rd
+
+        if self.instruction.imm is not None:
+            self.state.EX["Imm"] = self.instruction.imm
+        
+        self.stage_manager.forward()
     
     def printState(self, state: State, cycle: int):
         printstate = [
