@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from constants import BYTE_LEN, DMEM_FILE, DMEM_RESULT_FILE, IMEM_FILE, WORD_LEN
-from misc import signed_int_to_binary_str
+from constants import BYTE_LEN, DMEM_FILE, DMEM_RESULT_FILE, IMEM_FILE, WORD_LEN, MemSize
+from misc import signed_binary_str_to_int, signed_int_to_binary_str
 
 
 class InsMem(object):
@@ -24,11 +24,14 @@ class DataMem(object):
         self.outDir = outDir
         with open(ioDir / DMEM_FILE) as dm:
             self.DMem = [data.replace("\n", "") for data in dm.readlines()]
+        
+        # fill the rest of the memory with 0
+        self.DMem.extend(['00000000'] * (MemSize - len(self.DMem)))
 
     def readDataMem(self, ReadAddress: int):
         # read data memory
         binary_str = "".join(self.DMem[ReadAddress: ReadAddress + WORD_LEN])
-        return binary_str
+        return signed_binary_str_to_int(binary_str)
 
     def writeDataMem(self, Address: int, WriteData: int):
         # write data into byte addressable memory

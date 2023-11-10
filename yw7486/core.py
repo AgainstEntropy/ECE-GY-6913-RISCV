@@ -1,10 +1,10 @@
 from pathlib import Path
 
-from constants import FS_STATE_RESULT_FILE, INSTR_TYPES, RF_FILE, SS_STATE_RESULT_FILE, STAGES, WORD_LEN
+from constants import FS_STATE_RESULT_FILE, RF_FILE, SS_STATE_RESULT_FILE, STAGES, WORD_LEN
 from mem import DataMem, InsMem
 from state import StageManager, State
 from instruction import Instruction
-from misc import signed_binary_str_to_int
+from misc import signed_int_to_binary_str
 from monitors import Monitor
 
 
@@ -21,7 +21,7 @@ class RegisterFile(object):
 
     def outputRF(self, cycle: int):
         op = ["-" * 70 + "\n", f"State of RF after executing cycle: {cycle}\n"]
-        op.extend([f"{val}\n" for val in self.Registers])
+        op.extend([f"{signed_int_to_binary_str(val)}\n" for val in self.Registers])
         if cycle == 0:
             perm = "w"
         else:
@@ -144,14 +144,16 @@ class SingleStageCore(Core):
         self.nextState.MEM["Wrt_reg_addr"] = self.nextState.EX["Wrt_reg_addr"]
         
         self.nextState.MEM["Store_data"] = self.nextState.EX["Read_data2"]
+
+        self.stage_manager.forward()
     
     def MEM_forward(self):
         if self.instruction.is_save():
-            self.ext_dmem.writeDataMem(self.state.MEM["ALUresult"], self.state.MEM["Store_data"])
+            self.ext_dmem.writeDataMem(self.nextState.MEM["ALUresult"], self.nextState.MEM["Store_data"])
         
         if self.instruction.is_loadi():
             read_addr = self.nextState.MEM["ALUresult"]
-            read_val = signed_binary_str_to_int(self.ext_dmem.readDataMem(read_addr))
+            read_val = self.ext_dmem.readDataMem(read_addr)
             self.nextState.WB["Wrt_data"] = read_val
         else:
             self.nextState.WB["Wrt_data"] = self.nextState.MEM["ALUresult"]
@@ -162,9 +164,9 @@ class SingleStageCore(Core):
     
     def WB_forward(self):
         if self.instruction.is_i_type() or self.instruction.is_r_type() or self.instruction.is_loadi():
-            self.myRF.writeRF(self.state.WB["Wrt_reg_addr"], self.state.WB["Wrt_data"])
+            self.myRF.writeRF(self.nextState.WB["Wrt_reg_addr"], self.nextState.WB["Wrt_data"])
 
-        self.state.IF["PC"] += WORD_LEN
+        self.nextState.IF["PC"] += WORD_LEN
         self.stage_manager.reset()
     
     def printState(self, state: State, cycle: int):

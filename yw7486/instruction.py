@@ -1,7 +1,7 @@
 
 from constants import INSTR_TYPES, ENDIAN_TYPES
 from misc import sign_ext, signed_binary_str_to_int
-from alu import ALU_OPs
+from alu import FUNCT3_TO_ALU, ALU_OPs
 
 OPCODE_TO_INSTR_TYPE = {
     "0110011": INSTR_TYPES.R,
@@ -25,9 +25,6 @@ class Instruction:
         self.rd = None
         self.imm = None
         self.alu_op = None
-
-        # self.control = None
-        # self.alu_control = None
 
     def __init__(self, instruction: str, endian: str = ENDIAN_TYPES.BIG):
         self.raw_instr = instruction
@@ -65,25 +62,27 @@ class Instruction:
             self.rd = signed_binary_str_to_int(self.slice(7, 11))
 
     def parse_imm(self):
-        imm = None
+        imm_binary_str = None
         if self.type in [INSTR_TYPES.I, INSTR_TYPES.LOAD_I]:
-            imm = self.slice(20, 31)
+            imm_binary_str = self.slice(20, 31)
         elif self.type == INSTR_TYPES.J:
-            imm = self.slice(31) + self.slice(12, 19) + \
+            imm_binary_str = self.slice(31) + self.slice(12, 19) + \
                 self.slice(20) + self.slice(21, 30) + '0'
         elif self.type == INSTR_TYPES.B:
-            imm = self.slice(31) + self.slice(7) + \
+            imm_binary_str = self.slice(31) + self.slice(7) + \
                 self.slice(25, 30) + self.slice(8, 11) + '0'
         elif self.type == INSTR_TYPES.S:
-            imm = self.slice(25, 31) + self.slice(7, 11)
+            imm_binary_str = self.slice(25, 31) + self.slice(7, 11)
 
-        self.imm = signed_binary_str_to_int(sign_ext(imm)) if imm else None
+        self.imm = signed_binary_str_to_int(sign_ext(imm_binary_str)) if imm_binary_str else None
 
     def parse_alu(self):
-        try:
-            self.alu_op = ALU_OPs[(self.funct7, self.funct3)]
-        except KeyError:
-            self.alu_op = None
+        if self.funct3 is not None:
+            self.alu_op = FUNCT3_TO_ALU[self.funct3]
+        else:
+            self.alu_op = ALU_OPs.ADD
+        if self.funct7 == "0100000":
+            self.alu_op = ALU_OPs.SUB
 
     def is_halt(self):
         return self.type == INSTR_TYPES.HALT
