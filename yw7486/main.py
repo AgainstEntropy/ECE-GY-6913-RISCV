@@ -1,4 +1,3 @@
-import os
 from copy import deepcopy
 
 from core import FiveStageCore, SingleStageCore
@@ -29,18 +28,25 @@ def process_testcase(TC_args: Args):
     dmem_ss.outputDataMem()
     # dmem_fs.outputDataMem()
 
+    # dump SS and FS performance.
+    ssCore.monitor.writePerformance(mode='w')
+    # fsCore.monitor.writePerformance(mode='a')
 
 
 if __name__ == "__main__":
     args = get_args()
 
-    for testcase in os.listdir(args.iodir):
-        print(f"Processing {testcase} ...")
+    # for testcase_folder in os.listdir(args.iodir):
+    for testcase_folder in args.iodir.glob('*'):
+        print(f"Processing {testcase_folder} ...")
         testcase_args = deepcopy(args)
-        testcase_args.iodir = args.iodir / testcase
-        testcase_args.output_dir = args.output_dir / testcase
+        testcase_args.iodir = testcase_folder
+        testcase_args.output_dir = args.output_dir / testcase_folder.name
 
         testcase_args.output_dir.mkdir(parents=True, exist_ok=True)
 
         process_testcase(testcase_args)
 
+    else:
+        print("Done!")
+        

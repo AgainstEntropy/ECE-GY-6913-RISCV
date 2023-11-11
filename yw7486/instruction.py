@@ -1,4 +1,3 @@
-
 from constants import INSTR_TYPES, ENDIAN_TYPES
 from misc import sign_ext, signed_binary_str_to_int
 from alu import FUNCT3_TO_ALU, ALU_OPs
@@ -83,33 +82,12 @@ class Instruction:
             self.alu_op = ALU_OPs.ADD
         if self.funct7 == "0100000":
             self.alu_op = ALU_OPs.SUB
-
-    def is_halt(self):
-        return self.type == INSTR_TYPES.HALT
-    
-    def is_i_type(self):
-        return self.type == INSTR_TYPES.I
-
-    def is_r_type(self):
-        return self.type == INSTR_TYPES.R
-    
-    def is_loadi(self):
-        return self.type == INSTR_TYPES.LOAD_I
-    
-    def is_save(self):
-        return self.type == INSTR_TYPES.S
-    
-    def is_branch(self):
-        return self.type == INSTR_TYPES.B
-    
-    def is_jump(self):
-        return self.type == INSTR_TYPES.J
     
     def is_beq(self):
-        return self.funct3 == '000'
+        return (self.type == INSTR_TYPES.B and self.funct3 == '000')
     
     def is_bne(self):
-        return self.funct3 == '001'
+        return (self.type == INSTR_TYPES.B and self.funct3 == '001')
 
     def slice(self, start: int, end: int = None):
         """Slice the instruction according to the start and end.

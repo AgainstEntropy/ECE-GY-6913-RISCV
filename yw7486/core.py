@@ -1,6 +1,7 @@
+from copy import deepcopy
 from pathlib import Path
 
-from constants import FS_STATE_RESULT_FILE, RF_FILE, SS_STATE_RESULT_FILE, STAGES, WORD_LEN
+from constants import FS_STATE_RESULT_FILE, INSTR_TYPES, PERFORMANCE_FILE, RF_FILE, SS_STATE_RESULT_FILE, STAGES, WORD_LEN
 from mem import DataMem, InsMem
 from state import StageManager, State
 from instruction import Instruction
@@ -41,7 +42,7 @@ class Core(object):
         self.ext_imem: InsMem = imem
         self.ext_dmem: DataMem = dmem
 
-        self.monitor = Monitor()
+        self.stage_manager = StageManager()
 
     @staticmethod
     def parse_instruction(instruction: str):
@@ -53,8 +54,9 @@ class SingleStageCore(Core):
     def __init__(self, ioDir: Path, imem: InsMem, dmem: DataMem):
         super(SingleStageCore, self).__init__(ioDir / f"SS_{RF_FILE}", imem, dmem)
         self.opFilePath = ioDir / SS_STATE_RESULT_FILE
-
-        self.stage_manager = StageManager()
+        self.monitor = Monitor(
+            outputFile=ioDir / PERFORMANCE_FILE, 
+            core_type="Single Stage")
 
     def step(self):
         if self.state.IF["nop"]:
@@ -80,20 +82,21 @@ class SingleStageCore(Core):
             self.nextState, self.cycle
         )  # print states after executing cycle 0, cycle 1, cycle 2 ...
 
-        self.state = (
-            self.nextState
-        )  # The end of the cycle and updates the current state with the values calculated in this cycle
+        # The end of the cycle and updates the current state with the values calculated in this cycle
+        self.state = deepcopy(self.nextState)  
         self.cycle += 1
+        self.monitor.update_cycle()
 
     def IF_forward(self):
         self.nextState.ID["Instr"] = self.ext_imem.readInstr(self.nextState.IF["PC"])
+        self.monitor.update_instr()
         self.stage_manager.forward()
 
     def ID_forward(self):
         current_instr = self.parse_instruction(self.nextState.ID["Instr"])
-        self.nextState.EX["is_I_type"] = current_instr.is_i_type()
+        self.nextState.EX["is_I_type"] = (current_instr.type == INSTR_TYPES.I)
         
-        if current_instr.is_halt():
+        if current_instr.type == INSTR_TYPES.HALT:
             self.nextState.IF['nop'] = True
             self.stage_manager.reset()
             return
@@ -113,13 +116,13 @@ class SingleStageCore(Core):
         if current_instr.alu_op is not None:
             self.nextState.EX["alu_op"] = current_instr.alu_op
 
-        if current_instr.is_jump():
+        if current_instr.type == INSTR_TYPES.J:
             self.myRF.writeRF(self.nextState.EX["Wrt_reg_addr"], self.nextState.IF["PC"] + WORD_LEN)
             self.nextState.IF["PC"] += self.nextState.EX["Imm"]
             self.stage_manager.reset()
             return
         
-        if current_instr.is_branch():
+        if current_instr.type == INSTR_TYPES.B:
             rs_equal = (self.nextState.EX["Read_data1"] == self.nextState.EX["Read_data2"])
             if (current_instr.is_beq() and rs_equal) or (current_instr.is_bne() and not rs_equal):
                 self.nextState.IF["PC"] += self.nextState.EX["Imm"]
@@ -128,13 +131,13 @@ class SingleStageCore(Core):
             self.stage_manager.reset()
             return
         
-        self.instruction = current_instr
+        self.instr_type = current_instr.type
         
         self.stage_manager.forward()
 
     def EX_forward(self):
         operand_1 = self.nextState.EX["Read_data1"]
-        if self.instruction.is_r_type() or self.instruction.is_branch():
+        if self.instr_type in [INSTR_TYPES.R, INSTR_TYPES.B]:
             operand_2 = self.nextState.EX["Read_data2"]
         else:
             operand_2 = self.nextState.EX["Imm"]
@@ -148,10 +151,10 @@ class SingleStageCore(Core):
         self.stage_manager.forward()
     
     def MEM_forward(self):
-        if self.instruction.is_save():
+        if self.instr_type == INSTR_TYPES.S:
             self.ext_dmem.writeDataMem(self.nextState.MEM["ALUresult"], self.nextState.MEM["Store_data"])
         
-        if self.instruction.is_loadi():
+        if self.instr_type == INSTR_TYPES.LOAD_I:
             read_addr = self.nextState.MEM["ALUresult"]
             read_val = self.ext_dmem.readDataMem(read_addr)
             self.nextState.WB["Wrt_data"] = read_val
@@ -163,7 +166,7 @@ class SingleStageCore(Core):
         self.stage_manager.forward()
     
     def WB_forward(self):
-        if self.instruction.is_i_type() or self.instruction.is_r_type() or self.instruction.is_loadi():
+        if self.instr_type in [INSTR_TYPES.R, INSTR_TYPES.I, INSTR_TYPES.LOAD_I]:
             self.myRF.writeRF(self.nextState.WB["Wrt_reg_addr"], self.nextState.WB["Wrt_data"])
 
         self.nextState.IF["PC"] += WORD_LEN
