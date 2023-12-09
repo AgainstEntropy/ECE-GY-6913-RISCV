@@ -45,14 +45,14 @@ class StageManager:
         self.reset()
 
     def reset(self) -> None:
-        self.current_stage = STAGES.IF
+        self.current_stage: STAGES = STAGES.IF
     
     def set_stage(self, stage: int = None) -> None:
         if stage is not None:
             self.current_stage = stage
         
     def forward(self) -> None:
-        self.current_stage += 1
+        self.current_stage = STAGES(self.current_stage.value + 1)
 
     def is_stage(self, stage: int) -> bool:
         return self.current_stage == stage

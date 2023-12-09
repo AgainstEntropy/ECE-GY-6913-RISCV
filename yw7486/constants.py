@@ -1,4 +1,4 @@
-from easydict import EasyDict
+from enum import Enum, auto
 
 # memory size, in reality, the memory size should be 2^32,
 # but for this lab, for the space resaon, we keep it as this large number,
@@ -22,25 +22,22 @@ WORD_LEN = SYS_BIT // BYTE_LEN
 UPPER_BOUND = 2 ** (SYS_BIT - 1) - 1
 BIAS = 2 ** SYS_BIT
 
-STAGES = EasyDict(
-    IF  = 0,
-    ID  = 1,
-    EX  = 2,
-    MEM = 3,
-    WB  = 4,
-)
+class STAGES(Enum):
+    IF  = auto()
+    ID  = auto()
+    EX  = auto()
+    MEM = auto()
+    WB  = auto()
 
-INSTR_TYPES = EasyDict(
-    R      = 0,
-    I      = 1,
-    J      = 2,
-    B      = 3,
-    LOAD_I = 4,
-    S      = 5,
-    HALT   = 6,
-)
+class INSTR_TYPES(Enum):
+    R      = auto()
+    I      = auto()
+    J      = auto()
+    B      = auto()
+    LOAD_I = auto()
+    S      = auto()
+    HALT   = auto()
 
-ENDIAN_TYPES = EasyDict(
-    BIG   = 0,
-    SMALL = 1,
-)
+class ENDIAN_TYPES(Enum):
+    BIG   = auto()
+    SMALL = auto()
