@@ -2,7 +2,7 @@ from pathlib import Path
 
 
 class Monitor:
-    def __init__(self, outputFile: Path, core_type: str = "Single Stage") -> None:
+    def __init__(self, core_type: str, outputFile: Path) -> None:
         self.outputFile = outputFile
         self.core_type = core_type
         self.reset()
