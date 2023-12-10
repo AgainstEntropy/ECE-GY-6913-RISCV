@@ -27,7 +27,7 @@ class Monitor:
         with self.outputFile.open(mode) as f:
             if mode == 'a': f.write("\n")
             f.write(f"Performance of {self.core_type}:\n")
-            f.write(f"Cycles -> {self.total_cycles}\n")
-            f.write(f"Instructions -> {self.total_instr}\n")
+            f.write(f"#Cycles -> {self.total_cycles}\n")
+            f.write(f"#Instructions -> {self.total_instr}\n")
             f.write(f"CPI -> {self.cpi()}\n")
             f.write(f"IPC -> {self.ipc()}\n")

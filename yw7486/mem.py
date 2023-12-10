@@ -1,6 +1,7 @@
 from pathlib import Path
 
-from constants import BYTE_LEN, DMEM_FILE, DMEM_RESULT_FILE, IMEM_FILE, WORD_LEN, MemSize
+from constants import (BYTE_LEN, DMEM_FILE, DMEM_RESULT_FILE, IMEM_FILE,
+                       WORD_LEN, MemSize)
 from misc import signed_binary_str_to_int, signed_int_to_binary_str
 
 

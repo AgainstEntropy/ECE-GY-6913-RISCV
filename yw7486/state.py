@@ -10,7 +10,7 @@ class State(object):
         self.reset_WB()
 
     def reset_IF(self):
-        self.IF = {"nop": False, "PC": 0, "halted":False}
+        self.IF = {"nop": False, "PC": 0}
 
     def reset_ID(self):
         self.ID = {"nop": False, "Instr": None, "halted":False}
@@ -67,10 +67,6 @@ class StageManager:
 
     def reset(self) -> None:
         self.current_stage: STAGES = STAGES.IF
-    
-    def set_stage(self, stage: int = None) -> None:
-        if stage is not None:
-            self.current_stage = stage
         
     def forward(self) -> None:
         self.current_stage = STAGES(self.current_stage.value + 1)

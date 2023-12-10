@@ -1,36 +1,36 @@
 from copy import deepcopy
 
+from arg_utils import Args, get_args
 from core import FiveStageCore, SingleStageCore
 from mem import DataMem, InsMem
-from arg_utils import Args, get_args
 
 
 def process_testcase(TC_args: Args):
 
     imem = InsMem("Imem", TC_args.iodir)
     dmem_ss = DataMem("SS", TC_args.iodir, TC_args.output_dir)
-    # dmem_fs = DataMem("FS", testcase_args)
+    dmem_fs = DataMem("FS", TC_args.iodir, TC_args.output_dir)
 
     ssCore = SingleStageCore(TC_args.output_dir, imem, dmem_ss)
-    # fsCore = FiveStageCore(testcase_args, imem, dmem_fs)
+    fsCore = FiveStageCore(TC_args.output_dir, imem, dmem_fs)
 
     while True:
         if not ssCore.halted:
             ssCore.step()
 
-        # if not fsCore.halted:
-        #     fsCore.step()
+        if not fsCore.halted:
+            fsCore.step()
 
-        if ssCore.halted: # and fsCore.halted:
+        if ssCore.halted and fsCore.halted:
             break
 
     # dump SS and FS data mem.
     dmem_ss.outputDataMem()
-    # dmem_fs.outputDataMem()
+    dmem_fs.outputDataMem()
 
     # dump SS and FS performance.
     ssCore.monitor.writePerformance(mode='w')
-    # fsCore.monitor.writePerformance(mode='a')
+    fsCore.monitor.writePerformance(mode='a')
 
 
 if __name__ == "__main__":

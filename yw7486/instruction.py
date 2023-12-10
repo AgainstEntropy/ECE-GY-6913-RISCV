@@ -1,6 +1,7 @@
-from constants import INSTR_TYPES, ENDIAN_TYPES
-from misc import sign_ext, signed_binary_str_to_int
 from alu import FUNCT3_TO_ALU, ALU_OPs
+from constants import ENDIAN_TYPES, INSTR_TYPES
+from control import INSTR_TYPE_TO_CONTROL
+from misc import sign_ext, signed_binary_str_to_int
 
 OPCODE_TO_INSTR_TYPE = {
     "0110011": INSTR_TYPES.R,
@@ -17,6 +18,7 @@ class Instruction:
     def reset(self):
         self.opcode = None
         self.type = None
+        self.control = None
         self.funct3 = None
         self.funct7 = None
         self.rs1 = None
@@ -31,17 +33,21 @@ class Instruction:
         self.reset()
 
         self.parse_type()
+        if self.type == INSTR_TYPES.HALT:
+            return
+        
+        self.parse_control()
         self.parse_func()
         self.parse_registers()
         self.parse_imm()
         self.parse_alu()
 
-        if self.type == INSTR_TYPES.HALT:
-            return
-
     def parse_type(self):
         self.opcode = self.slice(0, 6)
         self.type = OPCODE_TO_INSTR_TYPE[self.opcode]
+        
+    def parse_control(self):
+        self.control = INSTR_TYPE_TO_CONTROL[self.type]
 
     def parse_func(self):
         if self.type != INSTR_TYPES.J:
