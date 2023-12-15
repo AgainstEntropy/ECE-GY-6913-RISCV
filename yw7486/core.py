@@ -121,9 +121,7 @@ class SingleStageCore(Core):
             operand_2 = self.nextState.EX["Imm"]
 
         self.nextState.MEM["ALUresult"] = self.nextState.EX["alu_op"](operand_1, operand_2)
-
         self.nextState.MEM["Wrt_reg_addr"] = self.nextState.EX["Wrt_reg_addr"]
-        
         self.nextState.MEM["Store_data"] = self.nextState.EX["Read_data2"]
 
         self.stage_manager.forward()
@@ -203,7 +201,7 @@ class FiveStageCore(Core):
             return
 
         self.buffer.ID["Instr"] = self.ext_imem.readInstr(self.nextState.IF["PC"])
-        self.nextState.IF["PC"] += 4
+        self.nextState.IF["PC"] += WORD_LEN
 
         self.monitor.update_instr()
 
@@ -218,8 +216,7 @@ class FiveStageCore(Core):
         if not self.nextState.ID["Instr"]:
             return
 
-        current_instr = Instruction(self.buffer.ID["Instr"])
-
+        current_instr = self.parse_instruction(self.buffer.ID["Instr"])
         if current_instr.type == INSTR_TYPES.HALT:
             self.nextState.ID["halted"] = True
             self.nextState.EX["halted"] = True
@@ -240,7 +237,7 @@ class FiveStageCore(Core):
         
         if current_instr.control.Branch == 1 and self.check_branching(current_instr):
             self.nextState.EX["nop"] = True
-            self.nextState.IF["PC"] = self.nextState.IF["PC"] - 4 + current_instr.imm
+            self.nextState.IF["PC"] = self.nextState.IF["PC"] - WORD_LEN + current_instr.imm
             return
 
         if not current_instr.imm is None:
@@ -254,7 +251,7 @@ class FiveStageCore(Core):
 
         if current_instr.control.Jump == 1:
             self.myRF.writeRF(current_instr.rd,self.nextState.IF["PC"])
-            self.nextState.IF["PC"] = self.nextState.IF["PC"] - 4 + current_instr.imm
+            self.nextState.IF["PC"] = self.nextState.IF["PC"] - WORD_LEN + current_instr.imm
             self.nextState.EX["nop"] = True
             return
         
@@ -274,9 +271,7 @@ class FiveStageCore(Core):
         forwardA, forwardB = self.check_forwarding()
 
         self.nextState.EX["parsed_instr"]: Instruction = self.buffer.EX["parsed_instr"]
-
         self.nextState.EX["Read_data1"] = self.buffer.EX["Read_data1"]
-
         self.nextState.EX["Read_data2"] = self.buffer.EX["Read_data2"]
         
 
@@ -304,9 +299,7 @@ class FiveStageCore(Core):
                 operand_2 = self.nextState.EX["Imm"]
 
             self.buffer.MEM["ALUresult"] = self.nextState.EX["alu_op"](operand_1, operand_2)
-
             self.buffer.MEM["Wrt_reg_addr"] = self.nextState.EX["Wrt_reg_addr"]
-            
             self.buffer.MEM["Store_data"] = self.nextState.EX["Read_data2"]
 
     
@@ -333,7 +326,7 @@ class FiveStageCore(Core):
             self.buffer.WB["parsed_instr"]: Instruction = self.nextState.MEM["parsed_instr"]
 
             if self.nextState.MEM["parsed_instr"].control.MemWrite == 1:
-                self.ext_dmem.writeDataMem(self.nextState.MEM["ALUresult"],self.nextState.MEM["Store_data"])
+                self.ext_dmem.writeDataMem(self.nextState.MEM["ALUresult"], self.nextState.MEM["Store_data"])
             
             if self.nextState.MEM["parsed_instr"].control.MemtoReg == 1:
                 if self.nextState.MEM["parsed_instr"].control.MemRead == 1:
@@ -361,10 +354,10 @@ class FiveStageCore(Core):
         self.nextState.WB["Wrt_data"] = self.buffer.WB["Wrt_data"]
         
         if self.nextState.WB["parsed_instr"] and self.nextState.WB["parsed_instr"].control.RegWrite:
-                self.myRF.writeRF(self.nextState.WB["Wrt_reg_addr"],self.nextState.WB["Wrt_data"])    
+                self.myRF.writeRF(self.nextState.WB["Wrt_reg_addr"], self.nextState.WB["Wrt_data"])    
 
     def check_branching(self, instr: Instruction) -> bool:
-        val1, val2 = self.buffer.EX["Read_data1"],self.buffer.EX["Read_data2"]
+        val1, val2 = self.buffer.EX["Read_data1"], self.buffer.EX["Read_data2"]
 
         if self.buffer.WB["parsed_instr"] and self.buffer.WB["parsed_instr"].control.RegWrite:
             if instr.rs1 and instr.rs1 == self.buffer.WB["Wrt_reg_addr"]:
@@ -384,7 +377,7 @@ class FiveStageCore(Core):
     def check_load_use_data(self, instr: Instruction) -> bool:
         if self.buffer.EX["parsed_instr"] and self.buffer.EX["parsed_instr"].control.MemRead:
             if (self.buffer.EX["parsed_instr"].rd == instr.rs1) or (self.buffer.EX["parsed_instr"].rd == instr.rs2):
-                self.nextState.IF["PC"] -= 4
+                self.nextState.IF["PC"] -= WORD_LEN
                 self.nextState.EX["nop"] = True
                 return True
         return False
@@ -423,8 +416,7 @@ class FiveStageCore(Core):
         self.IF_forward()
 
         if (
-            self.nextState.IF["nop"]
-            and self.nextState.ID["nop"]
+            self.nextState.ID["nop"]
             and self.nextState.EX["nop"]
             and self.nextState.MEM["nop"]
             and self.nextState.WB["nop"]

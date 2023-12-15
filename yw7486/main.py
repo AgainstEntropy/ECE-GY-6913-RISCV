@@ -22,6 +22,9 @@ def process_testcase(TC_args: Args):
             fsCore.step()
 
         if ssCore.halted and fsCore.halted:
+            fsCore.myRF.outputRF(fsCore.cycle)  # dump RF
+            fsCore.printState(fsCore.nextState, fsCore.cycle)
+            fsCore.cycle += 1
             break
 
     # dump SS and FS data mem.
